@@ -1,0 +1,9 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: ServersTransport
+metadata:
+  name: k8s-dashboard-transport
+  namespace: kubernetes-dashboard
+
+spec:
+    serverName: "kubernetes-dashboard"
+    insecureSkipVerify: true
