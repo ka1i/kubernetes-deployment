@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-ingress-controller
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: traefik
+  labels:
+    app: traefik
+
+spec:
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik-ingress-controller
+      tolerations:
+      - operator: "Exists"
+        effect: "NoSchedule"
+      nodeSelector:
+        kubernetes.io/hostname: k8s-m1
+      containers:
+        - name: traefik
+          image: traefik:v2.9.9
+          args:
+            - --api
+            - --accesslog
+            - --api.insecure
+            - --api.dashboard
+            - --log.level=INFO
+            - --entrypoints.web.address=:80
+            - --entrypoints.websecure.address=:443
+            - --providers.kubernetescrd
+            - --providers.kubernetesingress
+            - --entryPoints.web.forwardedHeaders.trustedIPs=192.168.6.3
+          ports:
+            - name: web
+              hostPort: 80
+              containerPort: 80
+            - name: websecure
+              hostPort: 443
+              containerPort: 443
+            - name: admin
+              hostPort: 8080
+              containerPort: 8080
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_BIND_SERVICE
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+spec:
+  selector:
+    app: traefik
+  ports:
+    - protocol: TCP
+      port: 80
+      name: web
+    - protocol: TCP
+      port: 443
+      name: websecure
+    - protocol: TCP
+      port: 8080
+      name: admin
